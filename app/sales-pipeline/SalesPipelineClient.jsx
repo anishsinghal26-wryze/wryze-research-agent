@@ -137,6 +137,18 @@ export default function SalesPipelineClient() {
     );
   }
 
+  // Log out: ask the server to clear the login cookie, then reload the page.
+  // Reloading re-runs the server check in page.js, which now finds no cookie
+  // and shows the password screen again.
+  async function handleLogout() {
+    try {
+      await fetch("/sales-pipeline/api/logout", { method: "POST" });
+    } catch (e) {
+      // Even if the request hiccups, still send the user back to the gate.
+    }
+    window.location.href = "/sales-pipeline";
+  }
+
   // Count leads in each stage, for the little summary row at the top.
   const stageCounts = PIPELINE_STAGES.map((stage) => ({
     stage,
@@ -165,14 +177,45 @@ export default function SalesPipelineClient() {
       }}
     >
       {/* Header ------------------------------------------------------------ */}
-      <header style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>
-          Sales Pipeline Agent
-        </h1>
-        <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
-          Internal dashboard · Wryze.ai B2B outreach to SAT institutes ·{" "}
-          {leads.length} leads
-        </p>
+      <header
+        style={{
+          marginBottom: 20,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: 26, fontWeight: 700, margin: 0 }}>
+            Sales Pipeline Agent
+          </h1>
+          <p style={{ color: "#6b7280", marginTop: 6, fontSize: 14 }}>
+            Internal dashboard · Wryze.ai B2B outreach to SAT institutes ·{" "}
+            {leads.length} leads
+          </p>
+        </div>
+
+        {/* Logout button: clears the login cookie, then reloads so the
+            password screen appears again. */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          style={{
+            flex: "0 0 auto",
+            padding: "8px 16px",
+            borderRadius: 8,
+            border: "1px solid #d1d5db",
+            backgroundColor: "#fff",
+            color: "#374151",
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          Log out
+        </button>
       </header>
 
       {/* Stage summary ----------------------------------------------------- */}
