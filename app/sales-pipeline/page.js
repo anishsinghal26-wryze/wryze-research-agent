@@ -15,6 +15,11 @@ import { cookies } from "next/headers";
 import SalesPipelineClient from "./SalesPipelineClient";
 import LoginForm from "./LoginForm";
 
+// Never cache this page. Every visit (including the browser Back button)
+// re-runs the cookie check below, so a logged-out user can't see a cached
+// dashboard. Scoped to this page only; does not affect other routes.
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Sales Pipeline Agent · Wryze.ai",
 };
