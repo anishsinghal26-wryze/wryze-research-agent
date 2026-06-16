@@ -1,23 +1,38 @@
 // ============================================================================
-// page.js
+// app/sales-pipeline/page.js  (password-gated server component)
 // ----------------------------------------------------------------------------
-// This is the actual page Next.js shows at the URL:  /sales-pipeline
+// Shown at the URL: /sales-pipeline
 //
-// In the App Router, a folder named "sales-pipeline" with a "page.js" inside
-// automatically becomes a route. Because this is a brand-new folder, it cannot
-// collide with or break any of your existing pages or API routes.
+// Runs on the SERVER first and checks the login cookie:
+//   - cookie missing/wrong -> show LoginForm (the dashboard data is NOT sent)
+//   - cookie matches password -> show the real dashboard
 //
-// This file is intentionally tiny: it just renders the dashboard component.
-// Keeping the page itself small is a common, clean Next.js pattern.
+// Uses only Next.js built-ins (next/headers). No new dependencies. Does not
+// affect /monitor or any other route.
 // ============================================================================
 
+import { cookies } from "next/headers";
 import SalesPipelineClient from "./SalesPipelineClient";
+import LoginForm from "./LoginForm";
 
-// Optional: this sets the browser tab title for this page.
 export const metadata = {
   title: "Sales Pipeline Agent · Wryze.ai",
 };
 
-export default function SalesPipelinePage() {
+export default async function SalesPipelinePage() {
+  // Read cookies on the server. (await works whether your Next.js version
+  // returns this synchronously or as a promise, so it's safe either way.)
+  const cookieStore = await cookies();
+  const token = cookieStore.get("sp_auth")?.value;
+
+  const expected = process.env.SALES_PIPELINE_PASSWORD;
+
+  // Logged in ONLY if the env var is set AND the cookie matches it exactly.
+  const isLoggedIn = Boolean(expected) && token === expected;
+
+  if (!isLoggedIn) {
+    return <LoginForm />;
+  }
+
   return <SalesPipelineClient />;
 }
