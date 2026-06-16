@@ -58,12 +58,21 @@ export default function LoginForm() {
       <form
         onSubmit={handleSubmit}
         style={{
+          // Explicit column layout makes the fields stack vertically and
+          // overrides any global CSS that might force a row layout.
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "stretch", // children take the full form width
+          gap: 0,
           width: "100%",
-          maxWidth: 360,
+          maxWidth: 380,
+          margin: "0 auto",
+          boxSizing: "border-box",
           border: "1px solid #e5e7eb",
           borderRadius: 12,
           padding: 24,
           boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+          backgroundColor: "#ffffff",
         }}
       >
         <h1 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 4px" }}>
