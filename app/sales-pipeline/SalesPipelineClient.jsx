@@ -195,6 +195,10 @@ export default function SalesPipelineClient() {
             Internal dashboard · Wryze.ai B2B outreach to SAT institutes ·{" "}
             {leads.length} leads
           </p>
+          {/* TEMP preview-test marker — safe to delete before merging to main. */}
+          <p style={{ color: "#9ca3af", marginTop: 4, fontSize: 12 }}>
+            Preview build · feature/sales-pipeline-next-change
+          </p>
         </div>
 
         {/* Logout button: clears the login cookie, then reloads so the
