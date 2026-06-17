@@ -89,9 +89,11 @@ function ScoreBar({ score }) {
   );
 }
 
-export default function SalesPipelineClient() {
+export default function SalesPipelineClient({ initialLeads }) {
   // The list of leads is held in state so we can edit status/notes live.
-  const [leads, setLeads] = useState(SAMPLE_LEADS);
+  // Phase 2: real leads arrive from the server (Supabase).
+  // Use the server-provided array as-is. Empty means empty/error, not dummy data.
+  const [leads, setLeads] = useState(initialLeads ?? SAMPLE_LEADS);
 
   // Filter controls.
   const [search, setSearch] = useState("");
@@ -130,11 +132,31 @@ export default function SalesPipelineClient() {
   const selectedLead = leads.find((l) => l.id === selectedId);
 
   // ---- Editing helpers -----------------------------------------------------
-  // Update a single field on a single lead, in state.
+  // Map the dashboard's field names to the API / DB field names.
+  const FIELD_TO_API = {
+    status: "pipeline_stage",
+    notes: "notes",
+    outreachDraft: "outreach_draft",
+  };
+
+  // Update a single field on a single lead in state, then persist it to
+  // Supabase through the gated PATCH route. The UI updates immediately; the
+  // save happens in the background so refresh keeps the new value.
   function updateLead(id, field, value) {
     setLeads((prev) =>
       prev.map((l) => (l.id === id ? { ...l, [field]: value } : l))
     );
+
+    const apiField = FIELD_TO_API[field];
+    if (!apiField) return;
+
+    fetch(`/sales-pipeline/api/leads/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [apiField]: value }),
+    }).catch(() => {
+      // Keep Phase 2 simple: UI updates immediately; refresh reconciles.
+    });
   }
 
   // Log out: ask the server to clear the login cookie, then reload the page.

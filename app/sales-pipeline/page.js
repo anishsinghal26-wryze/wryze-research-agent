@@ -1,43 +1,117 @@
-// ============================================================================
-// app/sales-pipeline/page.js  (password-gated server component)
-// ----------------------------------------------------------------------------
-// Shown at the URL: /sales-pipeline
-//
-// Runs on the SERVER first and checks the login cookie:
-//   - cookie missing/wrong -> show LoginForm (the dashboard data is NOT sent)
-//   - cookie matches password -> show the real dashboard
-//
-// Uses only Next.js built-ins (next/headers). No new dependencies. Does not
-// affect /monitor or any other route.
-// ============================================================================
-
 import { cookies } from "next/headers";
 import SalesPipelineClient from "./SalesPipelineClient";
 import LoginForm from "./LoginForm";
+import { getSupabaseServer } from "../../lib/supabaseServer";
 
-// Never cache this page. Every visit (including the browser Back button)
-// re-runs the cookie check below, so a logged-out user can't see a cached
-// dashboard. Scoped to this page only; does not affect other routes.
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Sales Pipeline Agent · Wryze.ai",
 };
 
+function mapLeadRow(row) {
+  return {
+    id: row.id,
+    instituteName: row.institute_name || "",
+    website: row.website || "",
+    city: row.city || "",
+    state: row.state || "",
+    country: row.country || "",
+    category: row.category || "",
+    estimatedSize: row.estimated_size || "",
+    contactPerson: row.contact_person || "",
+    contactEmail: row.contact_email || "",
+    contactLink: row.contact_link || "",
+    status: row.pipeline_stage || "New",
+    notes: row.notes || "",
+    outreachDraft: (row.metadata && row.metadata.outreach_draft) || "",
+    satFitScore: row.fit_score ?? 0,
+    priority: row.priority || "Low",
+  };
+}
+
+async function loadLeads() {
+  const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const hasKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!hasUrl || !hasKey) {
+    console.error("[sales-pipeline] Missing Supabase env", { hasUrl, hasKey });
+    return {
+      leads: [],
+      error:
+        "Supabase environment variables are missing in this deployment. Add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to Preview and redeploy.",
+    };
+  }
+
+  try {
+    const supabase = getSupabaseServer();
+    const { data, error } = await supabase
+      .from("leads")
+      .select(
+        "id, institute_name, website, city, state, country, category, " +
+          "estimated_size, contact_person, contact_email, contact_link, " +
+          "pipeline_stage, notes, metadata, fit_score, priority, created_at"
+      )
+      .order("fit_score", { ascending: false })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("[sales-pipeline] leads read failed:", error.message, error.code);
+      return {
+        leads: [],
+        error: `Could not load leads from Supabase: ${error.message}`,
+      };
+    }
+
+    return { leads: (data || []).map(mapLeadRow), error: null };
+  } catch (err) {
+    console.error("[sales-pipeline] Supabase client error:", err?.message);
+    return {
+      leads: [],
+      error: `Supabase client error: ${err?.message || "unknown"}`,
+    };
+  }
+}
+
+function ErrorBanner({ message }) {
+  return (
+    <div
+      style={{
+        maxWidth: 1200,
+        margin: "16px auto 0",
+        padding: "12px 16px",
+        borderRadius: 8,
+        border: "1px solid #fecaca",
+        background: "#fef2f2",
+        color: "#b91c1c",
+        fontFamily:
+          "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+        fontSize: 14,
+      }}
+    >
+      <strong>Leads could not be loaded.</strong> {message} (Showing an empty
+      list — not sample data.)
+    </div>
+  );
+}
+
 export default async function SalesPipelinePage() {
-  // Read cookies on the server. (await works whether your Next.js version
-  // returns this synchronously or as a promise, so it's safe either way.)
   const cookieStore = await cookies();
   const token = cookieStore.get("sp_auth")?.value;
 
   const expected = process.env.SALES_PIPELINE_PASSWORD;
-
-  // Logged in ONLY if the env var is set AND the cookie matches it exactly.
   const isLoggedIn = Boolean(expected) && token === expected;
 
   if (!isLoggedIn) {
     return <LoginForm />;
   }
 
-  return <SalesPipelineClient />;
+  const { leads, error } = await loadLeads();
+
+  return (
+    <>
+      {error && <ErrorBanner message={error} />}
+      <SalesPipelineClient initialLeads={leads} />
+    </>
+  );
 }
