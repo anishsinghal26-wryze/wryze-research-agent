@@ -31,6 +31,18 @@ function mapLeadRow(row) {
 }
 
 async function loadLeads() {
+  const hasUrl = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const hasKey = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!hasUrl || !hasKey) {
+    console.error("[sales-pipeline] Missing Supabase env", { hasUrl, hasKey });
+    return {
+      leads: [],
+      error:
+        "Supabase environment variables are missing in this deployment. Add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to Preview and redeploy.",
+    };
+  }
+
   try {
     const supabase = getSupabaseServer();
     const { data, error } = await supabase
@@ -44,15 +56,43 @@ async function loadLeads() {
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("Failed to load leads:", error.message);
-      return [];
+      console.error("[sales-pipeline] leads read failed:", error.message, error.code);
+      return {
+        leads: [],
+        error: `Could not load leads from Supabase: ${error.message}`,
+      };
     }
 
-    return (data || []).map(mapLeadRow);
+    return { leads: (data || []).map(mapLeadRow), error: null };
   } catch (err) {
-    console.error("Supabase not configured / unreachable:", err.message);
-    return [];
+    console.error("[sales-pipeline] Supabase client error:", err?.message);
+    return {
+      leads: [],
+      error: `Supabase client error: ${err?.message || "unknown"}`,
+    };
   }
+}
+
+function ErrorBanner({ message }) {
+  return (
+    <div
+      style={{
+        maxWidth: 1200,
+        margin: "16px auto 0",
+        padding: "12px 16px",
+        borderRadius: 8,
+        border: "1px solid #fecaca",
+        background: "#fef2f2",
+        color: "#b91c1c",
+        fontFamily:
+          "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+        fontSize: 14,
+      }}
+    >
+      <strong>Leads could not be loaded.</strong> {message} (Showing an empty
+      list — not sample data.)
+    </div>
+  );
 }
 
 export default async function SalesPipelinePage() {
@@ -66,7 +106,12 @@ export default async function SalesPipelinePage() {
     return <LoginForm />;
   }
 
-  const initialLeads = await loadLeads();
+  const { leads, error } = await loadLeads();
 
-  return <SalesPipelineClient initialLeads={initialLeads} />;
+  return (
+    <>
+      {error && <ErrorBanner message={error} />}
+      <SalesPipelineClient initialLeads={leads} />
+    </>
+  );
 }

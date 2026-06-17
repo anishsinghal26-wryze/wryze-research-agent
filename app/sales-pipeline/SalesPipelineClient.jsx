@@ -91,11 +91,9 @@ function ScoreBar({ score }) {
 
 export default function SalesPipelineClient({ initialLeads }) {
   // The list of leads is held in state so we can edit status/notes live.
-  // Phase 2: real leads arrive from the server (Supabase). Fall back to the
-  // bundled SAMPLE_LEADS only if no leads were passed in.
-  const [leads, setLeads] = useState(
-    initialLeads && initialLeads.length > 0 ? initialLeads : SAMPLE_LEADS
-  );
+  // Phase 2: real leads arrive from the server (Supabase).
+  // Use the server-provided array as-is. Empty means empty/error, not dummy data.
+  const [leads, setLeads] = useState(initialLeads ?? SAMPLE_LEADS);
 
   // Filter controls.
   const [search, setSearch] = useState("");
