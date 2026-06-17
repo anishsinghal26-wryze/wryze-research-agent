@@ -16,7 +16,7 @@
 // updates the screen but does not save to a database yet -- that comes later.
 // ============================================================================
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   SAMPLE_LEADS,
   PIPELINE_STAGES,
@@ -104,6 +104,12 @@ export default function SalesPipelineClient({ initialLeads }) {
   // Which lead is open in the detail card (null = none).
   const [selectedId, setSelectedId] = useState(null);
 
+  // Phase 2.1: persistence robustness.
+  // saveError surfaces failed saves instead of silently swallowing them.
+  // saveTimers debounces free-text saves so only the final value is sent.
+  const [saveError, setSaveError] = useState("");
+  const saveTimers = useRef({});
+
   // ---- Filtering -----------------------------------------------------------
   // useMemo recalculates the filtered list only when something it depends on
   // changes, which keeps things fast.
@@ -139,9 +145,36 @@ export default function SalesPipelineClient({ initialLeads }) {
     outreachDraft: "outreach_draft",
   };
 
-  // Update a single field on a single lead in state, then persist it to
-  // Supabase through the gated PATCH route. The UI updates immediately; the
-  // save happens in the background so refresh keeps the new value.
+  // Persist a single field to Supabase via the gated PATCH route.
+  // Surfaces failures via saveError instead of swallowing them.
+  async function persistField(id, apiField, value) {
+    try {
+      const res = await fetch(`/sales-pipeline/api/leads/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [apiField]: value }),
+      });
+
+      if (!res.ok) {
+        let msg = `Save failed (HTTP ${res.status}).`;
+        try {
+          const data = await res.json();
+          if (data && data.error) msg = data.error;
+        } catch {}
+        setSaveError(msg);
+        return;
+      }
+
+      setSaveError("");
+    } catch {
+      setSaveError(
+        "Save failed — network error. Your change is on screen but not yet saved."
+      );
+    }
+  }
+
+  // Update a single field in state immediately, then persist it.
+  // Status saves immediately. Notes/outreach draft are debounced.
   function updateLead(id, field, value) {
     setLeads((prev) =>
       prev.map((l) => (l.id === id ? { ...l, [field]: value } : l))
@@ -150,13 +183,18 @@ export default function SalesPipelineClient({ initialLeads }) {
     const apiField = FIELD_TO_API[field];
     if (!apiField) return;
 
-    fetch(`/sales-pipeline/api/leads/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [apiField]: value }),
-    }).catch(() => {
-      // Keep Phase 2 simple: UI updates immediately; refresh reconciles.
-    });
+    if (field === "status") {
+      persistField(id, apiField, value);
+      return;
+    }
+
+    const key = `${id}:${field}`;
+    if (saveTimers.current[key]) clearTimeout(saveTimers.current[key]);
+
+    saveTimers.current[key] = setTimeout(() => {
+      persistField(id, apiField, value);
+      delete saveTimers.current[key];
+    }, 500);
   }
 
   // Log out: ask the server to clear the login cookie, then reload the page.
@@ -198,6 +236,27 @@ export default function SalesPipelineClient({ initialLeads }) {
         padding: "24px 16px 64px",
       }}
     >
+      {saveError && (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            top: 16,
+            right: 16,
+            zIndex: 1000,
+            maxWidth: 360,
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #fecaca",
+            background: "#fef2f2",
+            color: "#b91c1c",
+            fontSize: 13,
+            boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+          }}
+        >
+          {saveError}
+        </div>
+      )}
       {/* Header ------------------------------------------------------------ */}
       <header
         style={{
