@@ -1,5 +1,5 @@
 // ============================================================================
-// app/api/approvals/reject/route.js
+// app/sales-pipeline/api/approvals/reject/route.js
 // ----------------------------------------------------------------------------
 // POST /api/approvals/reject
 //
@@ -18,7 +18,7 @@ import {
   setApprovalDecision,
   setOutreachDraftStatus,
   emitEvent,
-} from "../../../../lib/founderMemory";
+} from "../../../../../lib/founderMemory";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
