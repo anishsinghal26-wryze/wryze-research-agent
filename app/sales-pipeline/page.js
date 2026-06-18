@@ -27,6 +27,11 @@ function mapLeadRow(row) {
     outreachDraft: (row.metadata && row.metadata.outreach_draft) || "",
     satFitScore: row.fit_score ?? 0,
     priority: row.priority || "Low",
+    quality:
+      (row.metadata &&
+        row.metadata.enrichment &&
+        row.metadata.enrichment.quality_classification) ||
+      null,
   };
 }
 
