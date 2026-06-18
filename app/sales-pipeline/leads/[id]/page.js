@@ -14,6 +14,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import LoginForm from "../../LoginForm";
 import { getLeadDetail } from "../../../../lib/founderMemory";
+import EnrichPanel from "./EnrichPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -177,6 +178,141 @@ function BackLink() {
   );
 }
 
+const CLASS_COLORS = {
+  strong_fit: "#16a34a",
+  possible_fit: "#d97706",
+  wrong_category: "#dc2626",
+  duplicate_or_unclear: "#6b7280",
+};
+const CLASS_LABELS = {
+  strong_fit: "Strong fit",
+  possible_fit: "Possible fit",
+  wrong_category: "Wrong category — not a SAT lead",
+  duplicate_or_unclear: "Unclear / needs review",
+};
+
+function Social({ label, url }) {
+  if (!url) return null;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", fontSize: 13, marginRight: 12 }}>
+      {label}
+    </a>
+  );
+}
+
+function EnrichmentSection({ lead }) {
+  const e = lead && lead.metadata && lead.metadata.enrichment;
+  return (
+    <section style={card}>
+      <h2 style={sectionTitle}>Enrichment & verification</h2>
+
+      {/* Founder-triggered button (no auto-run) */}
+      <EnrichPanel leadId={lead.id} alreadyEnriched={Boolean(e)} />
+
+      {!e && (
+        <p style={{ ...emptyState, marginTop: 12 }}>
+          Not enriched yet. Run a public-web verification to confirm website,
+          category, location and SAT-prep fit.
+        </p>
+      )}
+
+      {e && (
+        <div style={{ marginTop: 14 }}>
+          {e.quality_classification === "wrong_category" && (
+            <div
+              role="alert"
+              style={{
+                padding: "10px 14px",
+                borderRadius: 8,
+                border: "1px solid #fecaca",
+                background: "#fef2f2",
+                color: "#b91c1c",
+                fontSize: 14,
+                fontWeight: 600,
+                marginBottom: 12,
+              }}
+            >
+              Not a SAT lead — kept visible for QA. {e.explanation || ""}
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <Badge
+              text={CLASS_LABELS[e.quality_classification] || e.quality_classification}
+              color={CLASS_COLORS[e.quality_classification]}
+            />
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>
+              Enriched {fmt(e.enriched_at)}
+            </span>
+          </div>
+
+          <Grid>
+            <Field label="Real business">{e.is_real_business === null ? "—" : String(e.is_real_business)}</Field>
+            <Field label="Offers SAT prep">{e.offers_sat_prep === null ? "—" : String(e.offers_sat_prep)}</Field>
+            <Field label="Verified website">
+              {e.verified_website ? (
+                <a href={e.verified_website} target="_blank" rel="noreferrer" style={{ color: "#2563eb" }}>{e.verified_website}</a>
+              ) : null}
+            </Field>
+            <Field label="Contact page">
+              {e.contact_page_url ? (
+                <a href={e.contact_page_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb" }}>{e.contact_page_url}</a>
+              ) : null}
+            </Field>
+            <Field label="Verified location">
+              {[e.location && e.location.city, e.location && e.location.state, e.location && e.location.country].filter(Boolean).join(", ")}
+            </Field>
+            <Field label="Category confidence">
+              {e.confidence && e.confidence.category != null ? e.confidence.category : "—"}
+            </Field>
+          </Grid>
+
+          {(e.socials && (e.socials.linkedin || e.socials.instagram || e.socials.facebook || e.socials.youtube)) ? (
+            <>
+              <div style={fieldLabel}>Public social profiles</div>
+              <div style={{ marginBottom: 12 }}>
+                <Social label="LinkedIn" url={e.socials.linkedin} />
+                <Social label="Instagram" url={e.socials.instagram} />
+                <Social label="Facebook" url={e.socials.facebook} />
+                <Social label="YouTube" url={e.socials.youtube} />
+              </div>
+            </>
+          ) : null}
+
+          {Array.isArray(e.marketing_signals) && e.marketing_signals.length > 0 ? (
+            <>
+              <div style={fieldLabel}>Marketing signals</div>
+              <ul style={{ margin: "2px 0 12px", paddingLeft: 18, fontSize: 13, color: "#374151" }}>
+                {e.marketing_signals.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            </>
+          ) : null}
+
+          {e.explanation && e.quality_classification !== "wrong_category" ? (
+            <>
+              <div style={fieldLabel}>Why this classification</div>
+              <div style={codeBox}>{e.explanation}</div>
+            </>
+          ) : null}
+
+          {Array.isArray(e.evidence) && e.evidence.length > 0 ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>Evidence (public sources)</div>
+              <ul style={{ margin: "2px 0 0", paddingLeft: 18, fontSize: 13 }}>
+                {e.evidence.map((ev, i) => (
+                  <li key={i}>
+                    <a href={ev.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>{ev.url}</a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default async function LeadDetailPage({ params }) {
   // ---- Auth gate (same cookie + pattern as /sales-pipeline) ----------------
   const cookieStore = await cookies();
@@ -257,6 +393,9 @@ export default async function LeadDetailPage({ params }) {
       ) : (
         <div style={{ marginBottom: 18 }} />
       )}
+
+      {/* ---- Enrichment & verification (Phase 8b) -------------------------- */}
+      <EnrichmentSection lead={lead} />
 
       {/* ---- Profile -------------------------------------------------------- */}
       <section style={card}>

@@ -42,6 +42,20 @@ const PRIORITY_COLORS = {
   Low: "#6b7280", // gray
 };
 
+// Phase 8b: quality classification from lead enrichment (metadata).
+const QUALITY_COLORS = {
+  strong_fit: "#16a34a",
+  possible_fit: "#d97706",
+  wrong_category: "#dc2626",
+  duplicate_or_unclear: "#6b7280",
+};
+const QUALITY_LABELS = {
+  strong_fit: "Strong fit",
+  possible_fit: "Possible fit",
+  wrong_category: "Wrong category",
+  duplicate_or_unclear: "Unclear",
+};
+
 // Small reusable colored "pill" / badge.
 function Badge({ text, color }) {
   return (
@@ -443,6 +457,22 @@ export default function SalesPipelineClient({ initialLeads }) {
                     <div style={{ color: "#6b7280", fontSize: 12 }}>
                       {lead.contactPerson}
                     </div>
+                    {lead.quality ? (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          marginTop: 4,
+                          padding: "1px 8px",
+                          borderRadius: 999,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#fff",
+                          backgroundColor: QUALITY_COLORS[lead.quality] || "#6b7280",
+                        }}
+                      >
+                        {QUALITY_LABELS[lead.quality] || lead.quality}
+                      </span>
+                    ) : null}
                   </Td>
                   <Td>
                     {lead.city}
