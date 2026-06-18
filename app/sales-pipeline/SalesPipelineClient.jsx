@@ -23,6 +23,7 @@ import {
   PIPELINE_STAGES,
   CATEGORIES,
 } from "./leadsData";
+import DiscoverPanel from "./DiscoverPanel";
 
 // A color for each pipeline stage, used by the status badges.
 const STAGE_COLORS = {
@@ -299,6 +300,9 @@ export default function SalesPipelineClient({ initialLeads }) {
           Log out
         </button>
       </header>
+
+      {/* Discover Real Leads (Phase 8) ------------------------------------ */}
+      <DiscoverPanel />
 
       {/* Stage summary ----------------------------------------------------- */}
       <div
