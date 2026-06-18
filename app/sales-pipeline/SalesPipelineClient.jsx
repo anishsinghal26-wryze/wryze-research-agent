@@ -17,6 +17,7 @@
 // ============================================================================
 
 import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import {
   SAMPLE_LEADS,
   PIPELINE_STAGES,
@@ -424,7 +425,17 @@ export default function SalesPipelineClient({ initialLeads }) {
                   }}
                 >
                   <Td>
-                    <div style={{ fontWeight: 600 }}>{lead.instituteName}</div>
+                    <Link
+                      href={`/sales-pipeline/leads/${lead.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        fontWeight: 600,
+                        color: "#2563eb",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {lead.instituteName}
+                    </Link>
                     <div style={{ color: "#6b7280", fontSize: 12 }}>
                       {lead.contactPerson}
                     </div>
