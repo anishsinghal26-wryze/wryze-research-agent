@@ -111,15 +111,19 @@ const AGENTS = [
   {
     n: 4,
     name: "Market Intelligence Agent",
-    status: "planned",
+    status: "live",
     purpose:
-      "Add market / competitor / segment context to a lead (local demand, competing institutes, pricing signals).",
-    input: "Enriched lead + market sources.",
-    output: "Market signals on the lead (future metadata).",
-    route: "— (planned; no Meta/LinkedIn/IG intelligence yet)",
-    nextDep: "Depends on stable Enrichment output.",
-    link: null,
-    live: () => null,
+      "Analyze a lead's PUBLIC marketing/acquisition signals: ads activity, social presence, themes, acquisition sophistication, and a recommended outreach angle. Read-only — links to (never scrapes) the Meta Ad Library.",
+    input: "One lead (founder-triggered “Analyze market signals”).",
+    output:
+      "leads.metadata.market_intelligence (acquisition_stage/score, meta_ads_active, social URLs, outreach angle, …).",
+    route: "lib/marketIntelligence.js · POST /sales-pipeline/api/market-intel",
+    nextDep: "Informs Contact Intelligence + Outreach Draft angle.",
+    link: { href: "/sales-pipeline", label: "Sales Pipeline" },
+    live: (s) => {
+      const t = s.latestByMode && s.latestByMode.market_intel;
+      return t ? `Last market scan: ${t.status} · ${fmt(t.created_at)}` : null;
+    },
   },
   {
     n: 5,
