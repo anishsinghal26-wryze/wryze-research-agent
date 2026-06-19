@@ -771,6 +771,9 @@ export default async function LeadDetailPage({ params }) {
   const approvalByEntity = new Map(
     (approvals || []).map((a) => [a.entity_id, a])
   );
+  // Phase 14: manual-send tracking map (leads.metadata.manual_send_activity).
+  const manualSendActivity =
+    (lead.metadata && lead.metadata.manual_send_activity) || {};
   const readyDrafts = (drafts || [])
     .filter((d) => d && d.status === "approved")
     .map((d) => {
@@ -786,6 +789,7 @@ export default async function LeadDetailPage({ params }) {
         risk_level: d.risk_level || ap.risk_level || null,
         recipient_name: matchesOdi ? odi.recommended_recipient_name || null : null,
         recipient_role: matchesOdi ? odi.recommended_recipient_role || null : null,
+        manual_send: manualSendActivity[d.id] || null,
       };
     });
 
