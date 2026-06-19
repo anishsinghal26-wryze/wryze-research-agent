@@ -357,6 +357,12 @@ export default function SalesPipelineClient({ initialLeads }) {
             >
               Demo Cockpit →
             </Link>
+            <Link
+              href="/sales-pipeline/campaigns"
+              style={{ color: "#2563eb", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
+            >
+              Campaigns →
+            </Link>
           </div>
         </div>
 
