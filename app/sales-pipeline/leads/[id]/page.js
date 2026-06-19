@@ -13,8 +13,14 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import LoginForm from "../../LoginForm";
-import { getLeadDetail } from "../../../../lib/founderMemory";
+import {
+  getLeadDetail,
+  buildLeadActivityTimeline,
+  deriveLeadPipelineStage,
+  PIPELINE_STAGE_LABELS,
+} from "../../../../lib/founderMemory";
 import EnrichPanel from "./EnrichPanel";
+import LeadActivityTimeline from "./LeadActivityTimeline";
 import MarketIntelPanel from "./MarketIntelPanel";
 import ContactIntelPanel from "./ContactIntelPanel";
 import OutreachDraftPanel from "./OutreachDraftPanel";
@@ -797,6 +803,21 @@ export default async function LeadDetailPage({ params }) {
       };
     });
 
+  // ---- Phase 18A: read-only activity timeline (no writes, no events) -------
+  // Derives the Phase 17 pipeline stage and assembles a chronological timeline
+  // purely from data already loaded above (lead + metadata, drafts, approvals).
+  const derivedStage = deriveLeadPipelineStage({
+    lead,
+    drafts: (drafts || []).map((d) => ({ id: d.id, status: d.status })),
+  });
+  const activityTimeline = buildLeadActivityTimeline({
+    lead,
+    drafts,
+    approvals,
+    pipelineStage: derivedStage,
+    pipelineStageLabel: PIPELINE_STAGE_LABELS[derivedStage] || derivedStage,
+  });
+
   return (
     <Shell>
       <div style={{ marginBottom: 14 }}>
@@ -821,6 +842,9 @@ export default async function LeadDetailPage({ params }) {
       ) : (
         <div style={{ marginBottom: 18 }} />
       )}
+
+      {/* ---- Activity timeline (Phase 18A, read-only) --------------------- */}
+      <LeadActivityTimeline items={activityTimeline} />
 
       {/* ---- Enrichment & verification (Phase 8b) -------------------------- */}
       <EnrichmentSection lead={lead} />
