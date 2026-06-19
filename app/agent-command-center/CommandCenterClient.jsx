@@ -128,15 +128,19 @@ const AGENTS = [
   {
     n: 5,
     name: "Contact / Decision-Maker Intelligence Agent",
-    status: "planned",
+    status: "live",
     purpose:
-      "Identify the right decision-maker and reachable contact details for each institute.",
-    input: "Enriched lead (company identity, public profiles).",
-    output: "Contact + decision-maker records (future).",
-    route: "— (planned)",
+      "Identify likely decision-makers (founder/owner, admissions or program lead, center manager) and public contact channels for founder-led outreach. Read-only; never hallucinates emails — contacts are grounded in public sources.",
+    input: "One lead (founder-triggered “Research contacts”).",
+    output:
+      "leads.metadata.contact_intelligence (people[], generic_contact_channels, recommended primary contact + next step).",
+    route: "lib/contactIntelligence.js · POST /sales-pipeline/api/contact-intel",
     nextDep: "Feeds the Outreach Draft Agent with a target contact.",
-    link: null,
-    live: () => null,
+    link: { href: "/sales-pipeline", label: "Sales Pipeline" },
+    live: (s) => {
+      const t = s.latestByMode && s.latestByMode.contact_intel;
+      return t ? `Last contact scan: ${t.status} · ${fmt(t.created_at)}` : null;
+    },
   },
   {
     n: 6,

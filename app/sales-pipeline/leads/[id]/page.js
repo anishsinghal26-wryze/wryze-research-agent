@@ -16,6 +16,7 @@ import LoginForm from "../../LoginForm";
 import { getLeadDetail } from "../../../../lib/founderMemory";
 import EnrichPanel from "./EnrichPanel";
 import MarketIntelPanel from "./MarketIntelPanel";
+import ContactIntelPanel from "./ContactIntelPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -464,6 +465,145 @@ function MarketIntelligenceSection({ lead }) {
   );
 }
 
+function ContactIntelligenceSection({ lead }) {
+  const c = lead && lead.metadata && lead.metadata.contact_intelligence;
+  const gc = (c && c.generic_contact_channels) || {};
+  const hasGeneric =
+    gc.website_contact_url || gc.general_email || gc.phone || gc.contact_form_url || gc.admissions_url;
+  return (
+    <section style={card}>
+      <h2 style={sectionTitle}>Contact &amp; decision-maker intelligence</h2>
+
+      {/* Founder-triggered button (no auto-run, single lead) */}
+      <ContactIntelPanel leadId={lead.id} alreadyResearched={Boolean(c)} />
+
+      {!c && (
+        <p style={{ ...emptyState, marginTop: 12 }}>
+          Not researched yet. Run a public-web scan to surface likely decision-makers
+          (founder/owner, admissions or program lead, center manager) and public
+          contact channels for founder-led outreach.
+        </p>
+      )}
+
+      {c && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <Badge
+              text={`${c.contacts_found_count ?? 0} contact${c.contacts_found_count === 1 ? "" : "s"}`}
+              color={c.contacts_found_count > 0 ? "#0d9488" : "#6b7280"}
+            />
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>
+              Researched {fmt(c.created_at)}
+              {c.task_id ? (
+                <> · Task <code>{c.task_id}</code></>
+              ) : null}
+            </span>
+          </div>
+
+          <Grid>
+            <Field label="Decision-maker confidence">
+              {c.decision_maker_confidence ?? "—"}
+            </Field>
+            <Field label="Recommended primary contact">
+              {c.recommended_primary_contact || "—"}
+            </Field>
+          </Grid>
+
+          {c.recommended_contact_reason ? (
+            <>
+              <div style={fieldLabel}>Why this contact</div>
+              <div style={fieldValue}>{c.recommended_contact_reason}</div>
+            </>
+          ) : null}
+
+          {/* ---- Named people (separate from generic channels) ------------- */}
+          {Array.isArray(c.people) && c.people.length > 0 ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 6 }}>People</div>
+              <div style={{ marginBottom: 12 }}>
+                {c.people.map((p, i) => (
+                  <div key={i} style={{ border: "1px solid #eef2f7", borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700 }}>{p.name}</span>
+                      {p.title ? <span style={{ fontSize: 13, color: "#374151" }}>· {p.title}</span> : null}
+                      {p.role_type ? <Badge text={p.role_type} color="#475569" /> : null}
+                      {p.confidence != null ? (
+                        <span style={{ fontSize: 12, color: "#9ca3af" }}>conf {p.confidence}</span>
+                      ) : null}
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 13 }}>
+                      {p.linkedin_url ? (
+                        <a href={p.linkedin_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", marginRight: 12 }}>LinkedIn</a>
+                      ) : null}
+                      {p.email ? (
+                        <a href={`mailto:${p.email}`} style={{ color: "#2563eb", marginRight: 12 }}>{p.email}</a>
+                      ) : null}
+                      {p.phone ? <span style={{ color: "#374151", marginRight: 12 }}>{p.phone}</span> : null}
+                      {p.source_url ? (
+                        <a href={p.source_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>source</a>
+                      ) : null}
+                    </div>
+                    {p.notes ? (
+                      <div style={{ marginTop: 4, fontSize: 12, color: "#6b7280" }}>{p.notes}</div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p style={{ ...emptyState, margin: "6px 0 12px" }}>
+              No named decision-maker found — use the generic contact channels below.
+            </p>
+          )}
+
+          {/* ---- Generic contact channels (separate from named people) ----- */}
+          {hasGeneric ? (
+            <>
+              <div style={fieldLabel}>Generic contact channels</div>
+              <ul style={{ margin: "2px 0 12px", paddingLeft: 18, fontSize: 13 }}>
+                {gc.website_contact_url ? <li><a href={gc.website_contact_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>Contact page</a></li> : null}
+                {gc.contact_form_url ? <li><a href={gc.contact_form_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>Contact form</a></li> : null}
+                {gc.admissions_url ? <li><a href={gc.admissions_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>Admissions page</a></li> : null}
+                {gc.general_email ? <li><a href={`mailto:${gc.general_email}`} style={{ color: "#2563eb" }}>{gc.general_email}</a></li> : null}
+                {gc.phone ? <li>{gc.phone}</li> : null}
+              </ul>
+            </>
+          ) : (
+            <p style={{ ...emptyState, margin: "6px 0 12px" }}>No public generic contact channels found.</p>
+          )}
+
+          {c.recommended_next_step ? (
+            <>
+              <div style={fieldLabel}>Recommended next step</div>
+              <div style={codeBox}>{c.recommended_next_step}</div>
+            </>
+          ) : null}
+
+          {c.explanation ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>Notes</div>
+              <div style={codeBox}>{c.explanation}</div>
+            </>
+          ) : null}
+
+          {Array.isArray(c.evidence_urls) && c.evidence_urls.length > 0 ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>Evidence (public sources)</div>
+              <ul style={{ margin: "2px 0 0", paddingLeft: 18, fontSize: 13 }}>
+                {c.evidence_urls.map((ev, i) => (
+                  <li key={i}>
+                    <a href={ev.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>{ev.url}</a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default async function LeadDetailPage({ params }) {
   // ---- Auth gate (same cookie + pattern as /sales-pipeline) ----------------
   const cookieStore = await cookies();
@@ -550,6 +690,9 @@ export default async function LeadDetailPage({ params }) {
 
       {/* ---- Market intelligence (Phase 9) -------------------------------- */}
       <MarketIntelligenceSection lead={lead} />
+
+      {/* ---- Contact & decision-maker intelligence (Phase 10) ------------- */}
+      <ContactIntelligenceSection lead={lead} />
 
       {/* ---- Profile -------------------------------------------------------- */}
       <section style={card}>
