@@ -6,6 +6,7 @@ import {
   deriveLeadPipelineStage,
   listLeadDraftStatuses,
   PIPELINE_STAGE_LABELS,
+  summarizeFounderNotes,
 } from "../../lib/founderMemory";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +20,14 @@ function mapLeadRow(row, draftsForLead) {
     lead: row,
     drafts: draftsForLead || [],
   });
+  const notes = summarizeFounderNotes(row.metadata || {});
   return {
     id: row.id,
     pipelineStage,
     pipelineStageLabel: PIPELINE_STAGE_LABELS[pipelineStage] || pipelineStage,
+    notesCount: notes.notes_count,
+    notesPreview: notes.latest_note_preview,
+    notesLatestAt: notes.latest_note_created_at,
     instituteName: row.institute_name || "",
     website: row.website || "",
     city: row.city || "",
