@@ -244,11 +244,17 @@ function EnrichmentSection({ lead }) {
             <span style={{ fontSize: 12, color: "#9ca3af" }}>
               Enriched {fmt(e.enriched_at)}
             </span>
+            {e.task_id ? (
+              <span style={{ fontSize: 12, color: "#9ca3af" }}>
+                · Task <code>{e.task_id}</code>
+              </span>
+            ) : null}
           </div>
 
           <Grid>
             <Field label="Real business">{e.is_real_business === null ? "—" : String(e.is_real_business)}</Field>
             <Field label="Offers SAT prep">{e.offers_sat_prep === null ? "—" : String(e.offers_sat_prep)}</Field>
+            <Field label="Primary business">{e.primary_business || "—"}</Field>
             <Field label="Verified website">
               {e.verified_website ? (
                 <a href={e.verified_website} target="_blank" rel="noreferrer" style={{ color: "#2563eb" }}>{e.verified_website}</a>
@@ -295,9 +301,22 @@ function EnrichmentSection({ lead }) {
             </>
           ) : null}
 
+          {Array.isArray(e.sat_prep_evidence) && e.sat_prep_evidence.length > 0 ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>SAT-prep evidence (public sources)</div>
+              <ul style={{ margin: "2px 0 0", paddingLeft: 18, fontSize: 13 }}>
+                {e.sat_prep_evidence.map((ev, i) => (
+                  <li key={i}>
+                    <a href={ev.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>{ev.url}</a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+
           {Array.isArray(e.evidence) && e.evidence.length > 0 ? (
             <>
-              <div style={{ ...fieldLabel, marginTop: 10 }}>Evidence (public sources)</div>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>Supporting sources (public)</div>
               <ul style={{ margin: "2px 0 0", paddingLeft: 18, fontSize: 13 }}>
                 {e.evidence.map((ev, i) => (
                   <li key={i}>
