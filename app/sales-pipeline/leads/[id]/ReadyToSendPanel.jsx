@@ -23,6 +23,35 @@ const CHECKLIST = [
 
 const MANUAL_SEND_CHANNELS = ["LinkedIn", "Email", "Phone follow-up", "Other"];
 
+// Phase 15: follow-up tracking options.
+const FOLLOW_UP_CHANNELS = ["LinkedIn", "Email", "Phone", "Other"];
+const FOLLOW_UP_STATUSES = [
+  { value: "awaiting_reply", label: "Awaiting reply" },
+  { value: "follow_up_sent", label: "Follow-up sent" },
+  { value: "replied", label: "Replied" },
+  { value: "not_interested", label: "Not interested" },
+  { value: "booked_call", label: "Booked call" },
+  { value: "closed", label: "Closed" },
+];
+
+function fuStatusLabel(v) {
+  const m = FOLLOW_UP_STATUSES.find((s) => s.value === v);
+  return m ? m.label : v || "—";
+}
+
+// Local (client-side) due-date state — no reminders/automation, just a badge.
+function dueState(due) {
+  if (!due) return null;
+  const d = new Date(String(due).slice(0, 10) + "T00:00:00");
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = d.getTime() - today.getTime();
+  if (diff < 0) return { label: "Overdue", color: "#dc2626" };
+  if (diff === 0) return { label: "Due today", color: "#d97706" };
+  return { label: "Upcoming", color: "#16a34a" };
+}
+
 function fmt(iso) {
   if (!iso) return null;
   try {
@@ -68,6 +97,24 @@ function ReadyCard({ draft }) {
   const [marking, setMarking] = useState(false);
   const [markError, setMarkError] = useState("");
 
+  // Phase 15: follow-up tracking (records only — no sending, no reminders).
+  const [followUp, setFollowUp] = useState(draft.follow_up || null);
+  const [fuStatus, setFuStatus] = useState(
+    (draft.follow_up && draft.follow_up.follow_up_status) || "awaiting_reply"
+  );
+  const [fuChannel, setFuChannel] = useState(
+    (draft.follow_up && draft.follow_up.follow_up_channel) ||
+      (draft.channel === "email" ? "Email" : "LinkedIn")
+  );
+  const [fuDue, setFuDue] = useState(
+    (draft.follow_up && draft.follow_up.follow_up_due_date) || ""
+  );
+  const [fuNotes, setFuNotes] = useState(
+    (draft.follow_up && draft.follow_up.follow_up_notes) || ""
+  );
+  const [savingFu, setSavingFu] = useState(false);
+  const [fuError, setFuError] = useState("");
+
   const fullMessage =
     (draft.subject ? `Subject: ${draft.subject}\n\n` : "") + (draft.body || "");
 
@@ -103,6 +150,43 @@ function ReadyCard({ draft }) {
       setMarkError("Network error while recording.");
     } finally {
       setMarking(false);
+    }
+  }
+
+  async function saveFollowUp() {
+    setSavingFu(true);
+    setFuError("");
+    try {
+      const res = await fetch("/sales-pipeline/api/outreach-drafts/follow-up", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draft_id: draft.id,
+          follow_up_status: fuStatus,
+          follow_up_channel: fuChannel,
+          follow_up_due_date: fuDue || null,
+          follow_up_notes: fuNotes,
+        }),
+      });
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {}
+      if (!res.ok || !data.ok) {
+        setFuError(data.error || `Could not save follow-up (HTTP ${res.status}).`);
+        return;
+      }
+      setFollowUp({
+        follow_up_status: data.follow_up_status,
+        follow_up_channel: data.follow_up_channel,
+        follow_up_due_date: data.follow_up_due_date,
+        follow_up_notes: data.follow_up_notes,
+        updated_at: data.updated_at,
+      });
+    } catch {
+      setFuError("Network error while saving follow-up.");
+    } finally {
+      setSavingFu(false);
     }
   }
 
@@ -269,6 +353,124 @@ function ReadyCard({ draft }) {
           ) : null}
           <div style={{ fontSize: 12, color: "#92400e", marginTop: 6 }}>
             Wryze did not send this automatically — you recorded that you sent it manually.
+          </div>
+
+          {/* ---- Follow-up tracking (Phase 15) — records only, never sends -- */}
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dbeafe" }}>
+            <div style={label}>Follow-up tracking</div>
+
+            {followUp ? (
+              <div style={{ fontSize: 13, color: "#374151", marginBottom: 8 }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "2px 10px",
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#fff",
+                    backgroundColor: "#475569",
+                  }}
+                >
+                  {fuStatusLabel(followUp.follow_up_status)}
+                </span>
+                {followUp.follow_up_channel ? <> · {followUp.follow_up_channel}</> : null}
+                {followUp.follow_up_due_date ? (
+                  <>
+                    {" "}· due {followUp.follow_up_due_date}
+                    {dueState(followUp.follow_up_due_date) ? (
+                      <span
+                        style={{
+                          marginLeft: 6,
+                          color: dueState(followUp.follow_up_due_date).color,
+                          fontWeight: 700,
+                        }}
+                      >
+                        ({dueState(followUp.follow_up_due_date).label})
+                      </span>
+                    ) : null}
+                  </>
+                ) : null}
+                {followUp.follow_up_notes ? (
+                  <div style={{ marginTop: 4 }}>Notes: {followUp.follow_up_notes}</div>
+                ) : null}
+                <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>
+                  Updated {fmt(followUp.updated_at)}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
+                No follow-up set yet — record the next action below.
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <select
+                value={fuStatus}
+                onChange={(e) => setFuStatus(e.target.value)}
+                style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 14 }}
+              >
+                {FOLLOW_UP_STATUSES.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={fuChannel}
+                onChange={(e) => setFuChannel(e.target.value)}
+                style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 14 }}
+              >
+                {FOLLOW_UP_CHANNELS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={fuDue}
+                onChange={(e) => setFuDue(e.target.value)}
+                style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 14 }}
+              />
+              <button
+                onClick={saveFollowUp}
+                disabled={savingFu}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: "none",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#fff",
+                  backgroundColor: savingFu ? "#9ca3af" : "#0d9488",
+                  cursor: savingFu ? "default" : "pointer",
+                }}
+              >
+                {savingFu ? "Saving…" : followUp ? "Update follow-up" : "Save follow-up"}
+              </button>
+            </div>
+            <textarea
+              value={fuNotes}
+              onChange={(e) => setFuNotes(e.target.value)}
+              placeholder="Follow-up notes (optional)."
+              rows={2}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                borderRadius: 8,
+                border: "1px solid #d1d5db",
+                fontSize: 14,
+                padding: "8px 10px",
+                marginTop: 8,
+              }}
+            />
+            <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4 }}>
+              Tracking only — Wryze does not send follow-ups or reminders.
+            </div>
+            {fuError && (
+              <div style={{ fontSize: 13, color: "#b91c1c", marginTop: 6 }}>{fuError}</div>
+            )}
           </div>
         </div>
       ) : (

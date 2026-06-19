@@ -774,6 +774,9 @@ export default async function LeadDetailPage({ params }) {
   // Phase 14: manual-send tracking map (leads.metadata.manual_send_activity).
   const manualSendActivity =
     (lead.metadata && lead.metadata.manual_send_activity) || {};
+  // Phase 15: follow-up tracking map (leads.metadata.follow_up_activity).
+  const followUpActivity =
+    (lead.metadata && lead.metadata.follow_up_activity) || {};
   const readyDrafts = (drafts || [])
     .filter((d) => d && d.status === "approved")
     .map((d) => {
@@ -790,6 +793,7 @@ export default async function LeadDetailPage({ params }) {
         recipient_name: matchesOdi ? odi.recommended_recipient_name || null : null,
         recipient_role: matchesOdi ? odi.recommended_recipient_role || null : null,
         manual_send: manualSendActivity[d.id] || null,
+        follow_up: followUpActivity[d.id] || null,
       };
     });
 
