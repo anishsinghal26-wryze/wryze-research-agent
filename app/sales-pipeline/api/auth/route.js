@@ -39,7 +39,7 @@ export async function POST(request) {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production", // off on localhost so testing works
-    path: "/sales-pipeline",
+    path: "/", // site-wide so it also covers /agent-command-center (Phase 8.5)
     maxAge: 60 * 60 * 8, // stays logged in 8 hours
   });
   return res;
