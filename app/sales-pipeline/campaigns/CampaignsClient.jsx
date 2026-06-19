@@ -42,6 +42,33 @@ export default function CampaignsClient({ campaigns, loadError }) {
   const [discoveringId, setDiscoveringId] = useState(null);
   const [discoverErr, setDiscoverErr] = useState(null);
 
+  // Per-lead qualification state (keyed by `${campaignId}:${leadId}`).
+  const [qualifyingKey, setQualifyingKey] = useState(null);
+  const [qualifyErr, setQualifyErr] = useState(null);
+
+  async function handleQualify(campaignId, leadId, status) {
+    const key = `${campaignId}:${leadId}`;
+    setQualifyingKey(key);
+    setQualifyErr(null);
+    try {
+      const res = await fetch("/sales-pipeline/api/campaigns/qualify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_id: campaignId, lead_id: leadId, status }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        setQualifyErr(data.error || "Could not save the qualification.");
+        setQualifyingKey(null);
+        return;
+      }
+      window.location.reload();
+    } catch {
+      setQualifyErr("Network error — please try again.");
+      setQualifyingKey(null);
+    }
+  }
+
   const canCreate = name.trim() && query.trim() && !creating;
 
   async function handleCreate() {
@@ -207,18 +234,85 @@ export default function CampaignsClient({ campaigns, loadError }) {
                 <div style={{ fontSize: 13, color: "#6b7280", marginTop: 4 }}>ICP: {c.icp_notes}</div>
               ) : null}
 
-              <div style={{ fontSize: 13, color: "#111827", marginTop: 8 }}>
-                <strong>{c.discovered_count}</strong> discovered lead{c.discovered_count === 1 ? "" : "s"}
+              {/* Phase 22: qualification queue counts */}
+              <div style={{ fontSize: 13, color: "#111827", marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <span><strong>{c.discovered_count}</strong> discovered</span>
+                <span style={{ color: "#16a34a" }}><strong>{c.qualified_count || 0}</strong> qualified</span>
+                <span style={{ color: "#dc2626" }}><strong>{c.rejected_count || 0}</strong> rejected</span>
+                <span style={{ color: "#d97706" }}><strong>{c.maybe_count || 0}</strong> maybe</span>
               </div>
+              <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 4, fontStyle: "italic" }}>
+                Qualification is a manual decision only — it does not run enrichment, contact/market
+                intelligence, drafting, or any outreach.
+              </div>
+
+              {/* Phase 22: per-lead qualification queue */}
               {c.discovered_leads && c.discovered_leads.length > 0 ? (
-                <ul style={{ margin: "4px 0 0", paddingLeft: 18, fontSize: 13 }}>
-                  {c.discovered_leads.map((l) => (
-                    <li key={l.id}>
-                      <Link href={`/sales-pipeline/leads/${l.id}`} style={{ color: "#2563eb", textDecoration: "none" }}>{l.name}</Link>
-                    </li>
-                  ))}
-                </ul>
+                <div style={{ marginTop: 10 }}>
+                  {c.discovered_leads.map((l) => {
+                    const key = `${c.id}:${l.id}`;
+                    const busy = qualifyingKey === key;
+                    return (
+                      <div key={l.id} style={{ border: "1px solid #eef2f7", borderRadius: 10, padding: 10, marginBottom: 8 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                          <div style={{ minWidth: 0 }}>
+                            <Link href={`/sales-pipeline/leads/${l.id}`} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 700, fontSize: 14 }}>
+                              {l.name}
+                            </Link>
+                            <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                              {l.website ? (
+                                <a href={l.website} target="_blank" rel="noreferrer" style={{ color: "#2563eb" }}>{l.website}</a>
+                              ) : "no website"}
+                              {l.fit_score != null ? <> · fit {l.fit_score}</> : null}
+                              {l.priority ? <> · {l.priority}</> : null}
+                            </div>
+                          </div>
+                          <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                            {l.qualification ? (
+                              <span style={{
+                                padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, color: "#fff",
+                                backgroundColor: l.qualification === "qualified" ? "#16a34a" : l.qualification === "rejected" ? "#dc2626" : "#d97706",
+                              }}>
+                                {l.qualification === "qualified" ? "Qualified" : l.qualification === "rejected" ? "Rejected" : "Maybe / later"}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: 12, color: "#9ca3af" }}>Not reviewed</span>
+                            )}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                          {[
+                            { s: "qualified", label: "Mark qualified", bg: "#16a34a" },
+                            { s: "rejected", label: "Mark rejected", bg: "#dc2626" },
+                            { s: "maybe", label: "Maybe / later", bg: "#d97706" },
+                          ].map((b) => (
+                            <button
+                              key={b.s}
+                              type="button"
+                              onClick={() => handleQualify(c.id, l.id, b.s)}
+                              disabled={busy}
+                              style={{
+                                padding: "5px 10px",
+                                borderRadius: 8,
+                                border: "1px solid " + b.bg,
+                                background: l.qualification === b.s ? b.bg : "#fff",
+                                color: l.qualification === b.s ? "#fff" : b.bg,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: busy ? "wait" : "pointer",
+                                opacity: busy ? 0.6 : 1,
+                              }}
+                            >
+                              {busy ? "Saving…" : b.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : null}
+              {qualifyErr ? <div role="alert" style={{ fontSize: 13, color: "#b91c1c", marginTop: 6 }}>{qualifyErr}</div> : null}
 
               <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
                 <button
