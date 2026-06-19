@@ -21,6 +21,8 @@ const CHECKLIST = [
   "Send it yourself from your own LinkedIn/email account.",
 ];
 
+const MANUAL_SEND_CHANNELS = ["LinkedIn", "Email", "Phone follow-up", "Other"];
+
 function fmt(iso) {
   if (!iso) return null;
   try {
@@ -55,6 +57,17 @@ function ReadyCard({ draft }) {
   const [copied, setCopied] = useState("");
   const [checks, setChecks] = useState({});
 
+  // Phase 14: manual-send tracking (the product never sends — this only records
+  // that the founder sent it manually outside Wryze).
+  const [sentRecord, setSentRecord] = useState(draft.manual_send || null);
+  // Default the channel selector to LinkedIn, or Email if the draft channel is email.
+  const [channel, setChannel] = useState(
+    draft.channel === "email" ? "Email" : "LinkedIn"
+  );
+  const [notes, setNotes] = useState("");
+  const [marking, setMarking] = useState(false);
+  const [markError, setMarkError] = useState("");
+
   const fullMessage =
     (draft.subject ? `Subject: ${draft.subject}\n\n` : "") + (draft.body || "");
 
@@ -62,6 +75,35 @@ function ReadyCard({ draft }) {
     const ok = await copyText(text);
     setCopied(ok ? kind : "fail");
     setTimeout(() => setCopied((c) => (c === kind || c === "fail" ? "" : c)), 1500);
+  }
+
+  async function markSent() {
+    setMarking(true);
+    setMarkError("");
+    try {
+      const res = await fetch("/sales-pipeline/api/outreach-drafts/mark-manual-sent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ draft_id: draft.id, sent_channel: channel, sent_notes: notes }),
+      });
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {}
+      if (!res.ok || !data.ok) {
+        setMarkError(data.error || `Could not record (HTTP ${res.status}).`);
+        return;
+      }
+      setSentRecord({
+        sent_manually_at: data.sent_manually_at,
+        sent_channel: data.sent_channel,
+        sent_notes: data.sent_notes,
+      });
+    } catch {
+      setMarkError("Network error while recording.");
+    } finally {
+      setMarking(false);
+    }
   }
 
   const label = {
@@ -192,6 +234,103 @@ function ReadyCard({ draft }) {
           This checklist is a personal aid — it is not saved and does not send anything.
         </div>
       </div>
+
+      {/* ---- Manual send tracking (Phase 14) — records only, never sends --- */}
+      {sentRecord ? (
+        <div
+          style={{
+            marginTop: 14,
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #bfdbfe",
+            background: "#eff6ff",
+          }}
+        >
+          <span
+            style={{
+              display: "inline-block",
+              padding: "2px 10px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 700,
+              color: "#fff",
+              backgroundColor: "#2563eb",
+            }}
+          >
+            Manually sent
+          </span>
+          <div style={{ fontSize: 13, color: "#374151", marginTop: 6 }}>
+            Sent {fmt(sentRecord.sent_manually_at)} · via {sentRecord.sent_channel || "—"}
+          </div>
+          {sentRecord.sent_notes ? (
+            <div style={{ fontSize: 13, color: "#374151", marginTop: 4 }}>
+              Notes: {sentRecord.sent_notes}
+            </div>
+          ) : null}
+          <div style={{ fontSize: 12, color: "#92400e", marginTop: 6 }}>
+            Wryze did not send this automatically — you recorded that you sent it manually.
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: 14 }}>
+          <div style={label}>Mark as manually sent</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <select
+              value={channel}
+              onChange={(e) => setChannel(e.target.value)}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 8,
+                border: "1px solid #d1d5db",
+                fontSize: 14,
+              }}
+            >
+              {MANUAL_SEND_CHANNELS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={markSent}
+              disabled={marking}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: "none",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#fff",
+                backgroundColor: marking ? "#9ca3af" : "#2563eb",
+                cursor: marking ? "default" : "pointer",
+              }}
+            >
+              {marking ? "Recording…" : "Mark as manually sent"}
+            </button>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>
+              Records that you sent it yourself — Wryze does not send.
+            </span>
+          </div>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Optional notes (e.g. who you contacted, when, any reply)."
+            rows={2}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              borderRadius: 8,
+              border: "1px solid #d1d5db",
+              fontSize: 14,
+              padding: "8px 10px",
+              marginTop: 8,
+            }}
+          />
+          {markError && (
+            <div style={{ fontSize: 13, color: "#b91c1c", marginTop: 6 }}>{markError}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
