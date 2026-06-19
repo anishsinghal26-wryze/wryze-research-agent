@@ -291,6 +291,21 @@ export default function FollowUpsClient({ items, loadError }) {
                   Notes: {it.follow_up_notes.length > 140 ? it.follow_up_notes.slice(0, 140) + "…" : it.follow_up_notes}
                 </div>
               ) : null}
+              {/* Phase 19: founder notes visibility (read-only) */}
+              <div style={{ fontSize: 13, marginTop: 4 }}>
+                {it.notes_count > 0 ? (
+                  <span style={{ color: "#475569" }}>
+                    <span style={{ fontWeight: 700 }}>
+                      📝 Notes: {it.notes_count}
+                    </span>
+                    {it.notes_preview ? (
+                      <span style={{ color: "#9ca3af" }}> · {it.notes_preview}</span>
+                    ) : null}
+                  </span>
+                ) : (
+                  <span style={{ color: "#cbd5e1" }}>No notes</span>
+                )}
+              </div>
               <div style={{ marginTop: 6 }}>
                 <Link href={`/sales-pipeline/leads/${it.lead_id}`} style={{ fontSize: 13, color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>
                   Open lead →

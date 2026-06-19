@@ -586,6 +586,21 @@ export default function SalesPipelineClient({ initialLeads }) {
                         {QUALITY_LABELS[lead.quality] || lead.quality}
                       </span>
                     ) : null}
+                    {/* Phase 19: founder notes visibility (read-only) */}
+                    {lead.notesCount > 0 ? (
+                      <div style={{ marginTop: 4, fontSize: 11, color: "#6b7280" }}>
+                        <span style={{ fontWeight: 700, color: "#475569" }}>
+                          📝 {lead.notesCount} note{lead.notesCount === 1 ? "" : "s"}
+                        </span>
+                        {lead.notesPreview ? (
+                          <span style={{ color: "#9ca3af" }}> · {lead.notesPreview}</span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: 4, fontSize: 11, color: "#cbd5e1" }}>
+                        No notes
+                      </div>
+                    )}
                   </Td>
                   <Td>
                     {lead.city}
