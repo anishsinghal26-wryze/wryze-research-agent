@@ -344,19 +344,20 @@ export default function SalesPipelineClient({ initialLeads }) {
             Internal dashboard · Wryze.ai B2B outreach to SAT institutes ·{" "}
             {leads.length} leads
           </p>
-          <Link
-            href="/sales-pipeline/follow-ups"
-            style={{
-              display: "inline-block",
-              marginTop: 8,
-              color: "#2563eb",
-              fontSize: 14,
-              fontWeight: 600,
-              textDecoration: "none",
-            }}
-          >
-            Follow-ups CRM →
-          </Link>
+          <div style={{ marginTop: 8, display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <Link
+              href="/sales-pipeline/follow-ups"
+              style={{ color: "#2563eb", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
+            >
+              Follow-ups CRM →
+            </Link>
+            <Link
+              href="/sales-pipeline/demo-cockpit"
+              style={{ color: "#2563eb", fontSize: 14, fontWeight: 600, textDecoration: "none" }}
+            >
+              Demo Cockpit →
+            </Link>
+          </div>
         </div>
 
         {/* Logout button: clears the login cookie, then reloads so the
