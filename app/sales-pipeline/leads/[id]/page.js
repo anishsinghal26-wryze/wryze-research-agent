@@ -21,6 +21,7 @@ import {
 } from "../../../../lib/founderMemory";
 import EnrichPanel from "./EnrichPanel";
 import LeadActivityTimeline from "./LeadActivityTimeline";
+import FounderNotesPanel from "./FounderNotesPanel";
 import MarketIntelPanel from "./MarketIntelPanel";
 import ContactIntelPanel from "./ContactIntelPanel";
 import OutreachDraftPanel from "./OutreachDraftPanel";
@@ -845,6 +846,12 @@ export default async function LeadDetailPage({ params }) {
 
       {/* ---- Activity timeline (Phase 18A, read-only) --------------------- */}
       <LeadActivityTimeline items={activityTimeline} />
+
+      {/* ---- Founder notes (Phase 18B, notes write only) ------------------ */}
+      <FounderNotesPanel
+        leadId={lead.id}
+        initialNotes={(lead.metadata && lead.metadata.founder_notes) || []}
+      />
 
       {/* ---- Enrichment & verification (Phase 8b) -------------------------- */}
       <EnrichmentSection lead={lead} />
