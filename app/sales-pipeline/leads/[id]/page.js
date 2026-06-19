@@ -15,6 +15,7 @@ import { cookies } from "next/headers";
 import LoginForm from "../../LoginForm";
 import { getLeadDetail } from "../../../../lib/founderMemory";
 import EnrichPanel from "./EnrichPanel";
+import MarketIntelPanel from "./MarketIntelPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -332,6 +333,137 @@ function EnrichmentSection({ lead }) {
   );
 }
 
+const MI_STAGE_COLORS = {
+  high: "#16a34a",
+  medium: "#d97706",
+  low: "#6b7280",
+  unknown: "#94a3b8",
+};
+
+function MarketIntelligenceSection({ lead }) {
+  const m = lead && lead.metadata && lead.metadata.market_intelligence;
+  return (
+    <section style={card}>
+      <h2 style={sectionTitle}>Market intelligence</h2>
+
+      {/* Founder-triggered button (no auto-run, single lead) */}
+      <MarketIntelPanel leadId={lead.id} alreadyAnalyzed={Boolean(m)} />
+
+      {!m && (
+        <p style={{ ...emptyState, marginTop: 12 }}>
+          Not analyzed yet. Run a public-web scan to see ads/marketing signals,
+          social presence, acquisition sophistication, and a recommended outreach
+          angle.
+        </p>
+      )}
+
+      {m && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <Badge
+              text={`acquisition: ${m.acquisition_stage || "unknown"}`}
+              color={MI_STAGE_COLORS[m.acquisition_stage] || "#94a3b8"}
+            />
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>
+              Analyzed {fmt(m.created_at)}
+              {m.task_id ? (
+                <> · Task <code>{m.task_id}</code></>
+              ) : null}
+            </span>
+          </div>
+
+          <Grid>
+            <Field label="Acquisition score">{m.acquisition_score ?? "—"}</Field>
+            <Field label="Meta ads active">
+              {m.meta_ads_active === null || m.meta_ads_active === undefined
+                ? "unknown"
+                : String(m.meta_ads_active)}
+            </Field>
+            <Field label="Active ad count (est.)">
+              {m.active_ad_count_estimate ?? "unknown"}
+            </Field>
+            <Field label="Confidence">{m.confidence ?? "—"}</Field>
+          </Grid>
+
+          {Array.isArray(m.ad_platforms_seen) && m.ad_platforms_seen.length > 0 ? (
+            <>
+              <div style={fieldLabel}>Ad platforms seen</div>
+              <div style={{ ...fieldValue }}>{m.ad_platforms_seen.join(", ")}</div>
+            </>
+          ) : null}
+
+          {Array.isArray(m.ad_themes) && m.ad_themes.length > 0 ? (
+            <>
+              <div style={fieldLabel}>Marketing / ad themes</div>
+              <ul style={{ margin: "2px 0 12px", paddingLeft: 18, fontSize: 13, color: "#374151" }}>
+                {m.ad_themes.map((t, i) => <li key={i}>{t}</li>)}
+              </ul>
+            </>
+          ) : null}
+
+          {(m.facebook_url || m.instagram_url || m.youtube_url || m.linkedin_url || m.x_url) ? (
+            <>
+              <div style={fieldLabel}>Public social profiles</div>
+              <div style={{ marginBottom: 12 }}>
+                <Social label="Facebook" url={m.facebook_url} />
+                <Social label="Instagram" url={m.instagram_url} />
+                <Social label="YouTube" url={m.youtube_url} />
+                <Social label="LinkedIn" url={m.linkedin_url} />
+                <Social label="X" url={m.x_url} />
+              </div>
+            </>
+          ) : null}
+
+          {m.ad_library_url ? (
+            <>
+              <div style={fieldLabel}>Meta Ad Library (public search)</div>
+              <div style={{ marginBottom: 12 }}>
+                <a href={m.ad_library_url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", fontSize: 13, wordBreak: "break-all" }}>
+                  {m.ad_library_url}
+                </a>
+              </div>
+            </>
+          ) : null}
+
+          {m.social_activity_summary ? (
+            <>
+              <div style={fieldLabel}>Social activity summary</div>
+              <div style={fieldValue}>{m.social_activity_summary}</div>
+            </>
+          ) : null}
+
+          {m.recommended_outreach_angle ? (
+            <>
+              <div style={fieldLabel}>Recommended outreach angle</div>
+              <div style={codeBox}>{m.recommended_outreach_angle}</div>
+            </>
+          ) : null}
+
+          {m.explanation ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>Why this assessment</div>
+              <div style={codeBox}>{m.explanation}</div>
+            </>
+          ) : null}
+
+          {Array.isArray(m.evidence_urls) && m.evidence_urls.length > 0 ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>Evidence (public sources)</div>
+              <ul style={{ margin: "2px 0 0", paddingLeft: 18, fontSize: 13 }}>
+                {m.evidence_urls.map((ev, i) => (
+                  <li key={i}>
+                    <a href={ev.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>{ev.url}</a>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default async function LeadDetailPage({ params }) {
   // ---- Auth gate (same cookie + pattern as /sales-pipeline) ----------------
   const cookieStore = await cookies();
@@ -415,6 +547,9 @@ export default async function LeadDetailPage({ params }) {
 
       {/* ---- Enrichment & verification (Phase 8b) -------------------------- */}
       <EnrichmentSection lead={lead} />
+
+      {/* ---- Market intelligence (Phase 9) -------------------------------- */}
+      <MarketIntelligenceSection lead={lead} />
 
       {/* ---- Profile -------------------------------------------------------- */}
       <section style={card}>
