@@ -307,6 +307,51 @@ export default function CampaignsClient({ campaigns, loadError }) {
                             </button>
                           ))}
                         </div>
+
+                        {/* Phase 23: Qualified Lead Action Launcher (navigation only) */}
+                        {l.qualification === "qualified" ? (
+                          <div style={{ marginTop: 10, borderTop: "1px solid #f1f5f9", paddingTop: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: 0.3 }}>
+                              Next actions
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+                              {[
+                                { label: "Run enrichment", done: l.has_enrichment },
+                                { label: "Run market intelligence", done: l.has_market_intel },
+                                { label: "Run contact intelligence", done: l.has_contact_intel },
+                                { label: "Generate outreach draft", done: l.has_draft },
+                              ].map((a) => (
+                                <Link
+                                  key={a.label}
+                                  href={`/sales-pipeline/leads/${l.id}`}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    padding: "5px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid " + (a.done ? "#16a34a" : "#2563eb"),
+                                    background: a.done ? "#ecfdf5" : "#fff",
+                                    color: a.done ? "#16a34a" : "#2563eb",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  {a.done ? `✓ ${a.label} — complete` : `${a.label} →`}
+                                </Link>
+                              ))}
+                            </div>
+                            <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 6, fontStyle: "italic" }}>
+                              Actions are founder-clicked only and open the lead page where each agent
+                              runs. No send or outreach occurs automatically.
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ marginTop: 8, fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>
+                            Qualify this lead to unlock deeper agent actions.
+                          </div>
+                        )}
                       </div>
                     );
                   })}
