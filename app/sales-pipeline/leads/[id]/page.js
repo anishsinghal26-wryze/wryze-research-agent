@@ -17,6 +17,7 @@ import { getLeadDetail } from "../../../../lib/founderMemory";
 import EnrichPanel from "./EnrichPanel";
 import MarketIntelPanel from "./MarketIntelPanel";
 import ContactIntelPanel from "./ContactIntelPanel";
+import OutreachDraftPanel from "./OutreachDraftPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -604,6 +605,105 @@ function ContactIntelligenceSection({ lead }) {
   );
 }
 
+const DRAFT_RISK_COLORS = {
+  low: "#10b981",
+  medium: "#d97706",
+  high: "#dc2626",
+  critical: "#7f1d1d",
+  blocked: "#334155",
+};
+
+function OutreachDraftSection({ lead }) {
+  const o = lead && lead.metadata && lead.metadata.outreach_draft_intelligence;
+  return (
+    <section style={card}>
+      <h2 style={sectionTitle}>Outreach draft</h2>
+
+      {/* Founder-triggered button (no auto-run, draft only, queued for review) */}
+      <OutreachDraftPanel leadId={lead.id} alreadyDrafted={Boolean(o)} />
+
+      {!o && (
+        <p style={{ ...emptyState, marginTop: 12 }}>
+          No draft yet. Generate a short, founder-led outreach draft from this lead's
+          data and intelligence. The draft is queued for your review in Approvals —
+          nothing is sent.
+        </p>
+      )}
+
+      {o && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+            <Badge text="draft · pending review" color="#7c3aed" />
+            {o.risk_level ? <Badge text={`risk: ${o.risk_level}`} color={DRAFT_RISK_COLORS[o.risk_level]} /> : null}
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>
+              Drafted {fmt(o.created_at)}
+              {o.task_id ? (
+                <> · Task <code>{o.task_id}</code></>
+              ) : null}
+            </span>
+          </div>
+
+          <Grid>
+            <Field label="Recommended recipient">
+              {o.recommended_recipient_name
+                ? `${o.recommended_recipient_name}${o.recommended_recipient_role ? " — " + o.recommended_recipient_role : ""}`
+                : "Team / generic channel"}
+            </Field>
+            <Field label="Channel">{o.recommended_channel || "—"}</Field>
+            <Field label="Draft type">{o.draft_type || "—"}</Field>
+          </Grid>
+
+          {o.subject ? (
+            <>
+              <div style={fieldLabel}>Subject</div>
+              <div style={fieldValue}>{o.subject}</div>
+            </>
+          ) : null}
+
+          {o.body ? (
+            <>
+              <div style={fieldLabel}>Body (draft)</div>
+              <div style={codeBox}>{o.body}</div>
+            </>
+          ) : null}
+
+          {Array.isArray(o.personalization_points) && o.personalization_points.length > 0 ? (
+            <>
+              <div style={{ ...fieldLabel, marginTop: 10 }}>Personalization points</div>
+              <ul style={{ margin: "2px 0 12px", paddingLeft: 18, fontSize: 13, color: "#374151" }}>
+                {o.personalization_points.map((p, i) => <li key={i}>{p}</li>)}
+              </ul>
+            </>
+          ) : null}
+
+          {Array.isArray(o.source_context_used) && o.source_context_used.length > 0 ? (
+            <>
+              <div style={fieldLabel}>Source context used</div>
+              <div style={fieldValue}>{o.source_context_used.join(", ")}</div>
+            </>
+          ) : null}
+
+          {o.risk_notes ? (
+            <>
+              <div style={fieldLabel}>Risk notes (check before sending)</div>
+              <div style={codeBox}>{o.risk_notes}</div>
+            </>
+          ) : null}
+
+          <div style={{ marginTop: 10 }}>
+            <Link
+              href="/sales-pipeline/approvals"
+              style={{ color: "#2563eb", fontSize: 14, textDecoration: "none", fontWeight: 600 }}
+            >
+              Review &amp; approve/reject in Approvals →
+            </Link>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default async function LeadDetailPage({ params }) {
   // ---- Auth gate (same cookie + pattern as /sales-pipeline) ----------------
   const cookieStore = await cookies();
@@ -693,6 +793,9 @@ export default async function LeadDetailPage({ params }) {
 
       {/* ---- Contact & decision-maker intelligence (Phase 10) ------------- */}
       <ContactIntelligenceSection lead={lead} />
+
+      {/* ---- Outreach draft (Phase 11) ------------------------------------ */}
+      <OutreachDraftSection lead={lead} />
 
       {/* ---- Profile -------------------------------------------------------- */}
       <section style={card}>

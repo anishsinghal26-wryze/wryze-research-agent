@@ -145,15 +145,20 @@ const AGENTS = [
   {
     n: 6,
     name: "Outreach Draft Agent",
-    status: "partial",
-    purpose: "Draft personalized outreach for a qualified lead (never sends).",
-    input: "Enriched + scored lead (+ contact, once available).",
-    output: "Rows in outreach_drafts (status = pending).",
-    route: "lib/outreachDraft.js · outreach_drafts (route/shell partially live)",
+    status: "live",
+    purpose:
+      "Draft a short, founder-led outreach message for a lead using its enrichment, market, and contact intelligence. Draft-only — queued as a PENDING approval; never sends, never auto-approves.",
+    input: "One lead (founder-triggered “Generate outreach draft”).",
+    output:
+      "outreach_drafts row (pending) + approval_queue item (pending) + leads.metadata.outreach_draft_intelligence.",
+    route: "lib/outreachDraftAgent.js · POST /sales-pipeline/api/outreach-draft",
     nextDep: "Drafts flow to the Approval Agent.",
     link: { href: "/sales-pipeline/approvals", label: "Approvals" },
-    live: (s) =>
-      s.draftsCount != null ? `Outreach drafts on file: ${s.draftsCount}` : null,
+    live: (s) => {
+      const t = s.latestByMode && s.latestByMode.outreach_draft;
+      if (t) return `Last draft: ${t.status} · ${fmt(t.created_at)}`;
+      return s.draftsCount != null ? `Outreach drafts on file: ${s.draftsCount}` : null;
+    },
   },
   {
     n: 7,
