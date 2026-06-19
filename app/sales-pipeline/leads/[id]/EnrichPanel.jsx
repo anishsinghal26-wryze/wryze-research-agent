@@ -41,7 +41,12 @@ export default function EnrichPanel({ leadId, alreadyEnriched }) {
         setError(data.error || `Enrichment failed (HTTP ${res.status}).`);
         return;
       }
-      setResult(data.summary || {});
+      const summary = data.summary || {};
+      // task_id may live at the top level and/or inside summary — capture either.
+      setResult({
+        ...summary,
+        task_id: data.task_id || summary.task_id || null,
+      });
     } catch {
       setError("Network error while enriching. Please try again.");
     } finally {
@@ -121,11 +126,55 @@ export default function EnrichPanel({ leadId, alreadyEnriched }) {
               SAT prep: {String(result.offers_sat_prep)} · fit {result.fit_score} · {result.priority}
             </span>
           </div>
+
+          {result.primary_business && (
+            <p style={{ fontSize: 13, color: "#374151", margin: "8px 0 0" }}>
+              <strong>Primary business:</strong> {result.primary_business}
+            </p>
+          )}
+
           {result.explanation && (
             <p style={{ fontSize: 13, color: "#374151", margin: "8px 0 0" }}>
               {result.explanation}
             </p>
           )}
+
+          {Array.isArray(result.sat_prep_evidence) && result.sat_prep_evidence.length > 0 && (
+            <div style={{ margin: "8px 0 0" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.3 }}>
+                SAT-prep evidence
+              </div>
+              <ul style={{ margin: "2px 0 0", paddingLeft: 18, fontSize: 12 }}>
+                {result.sat_prep_evidence.map((ev, i) => (
+                  <li key={i}>
+                    <a href={ev.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>{ev.url}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {Array.isArray(result.evidence) && result.evidence.length > 0 && (
+            <div style={{ margin: "8px 0 0" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: 0.3 }}>
+                Supporting sources
+              </div>
+              <ul style={{ margin: "2px 0 0", paddingLeft: 18, fontSize: 12 }}>
+                {result.evidence.map((ev, i) => (
+                  <li key={i}>
+                    <a href={ev.url} target="_blank" rel="noreferrer" style={{ color: "#2563eb", wordBreak: "break-all" }}>{ev.url}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.task_id && (
+            <p style={{ fontSize: 11, color: "#9ca3af", margin: "8px 0 0" }}>
+              Task ID: <code>{result.task_id}</code>
+            </p>
+          )}
+
           <button style={refreshBtn} onClick={() => window.location.reload()}>
             Refresh to see full details
           </button>
