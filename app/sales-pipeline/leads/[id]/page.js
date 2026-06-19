@@ -18,6 +18,7 @@ import EnrichPanel from "./EnrichPanel";
 import MarketIntelPanel from "./MarketIntelPanel";
 import ContactIntelPanel from "./ContactIntelPanel";
 import OutreachDraftPanel from "./OutreachDraftPanel";
+import ReadyToSendPanel from "./ReadyToSendPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -760,6 +761,34 @@ export default async function LeadDetailPage({ params }) {
   const { lead, assessment, drafts, approvals, events, tasks } = detail;
   const location = [lead.city, lead.state, lead.country].filter(Boolean).join(", ");
 
+  // ---- Phase 13: approved drafts that are "Ready for manual send" -----------
+  // Uses existing statuses (status === "approved"); never introduces a new
+  // status. Final subject/body come from the draft row (reflects any edits);
+  // reviewed_at from the matching approval; recipient from the generated summary
+  // when it matches this draft. Nothing here sends anything.
+  const odi =
+    (lead.metadata && lead.metadata.outreach_draft_intelligence) || {};
+  const approvalByEntity = new Map(
+    (approvals || []).map((a) => [a.entity_id, a])
+  );
+  const readyDrafts = (drafts || [])
+    .filter((d) => d && d.status === "approved")
+    .map((d) => {
+      const ap = approvalByEntity.get(d.id) || {};
+      const matchesOdi = odi && odi.draft_id === d.id;
+      return {
+        id: d.id,
+        channel:
+          d.channel || (matchesOdi ? odi.recommended_channel : null) || "email",
+        subject: d.subject || "",
+        body: d.body || "",
+        reviewed_at: ap.reviewed_at || null,
+        risk_level: d.risk_level || ap.risk_level || null,
+        recipient_name: matchesOdi ? odi.recommended_recipient_name || null : null,
+        recipient_role: matchesOdi ? odi.recommended_recipient_role || null : null,
+      };
+    });
+
   return (
     <Shell>
       <div style={{ marginBottom: 14 }}>
@@ -796,6 +825,9 @@ export default async function LeadDetailPage({ params }) {
 
       {/* ---- Outreach draft (Phase 11) ------------------------------------ */}
       <OutreachDraftSection lead={lead} />
+
+      {/* ---- Ready for manual send (Phase 13) ----------------------------- */}
+      {readyDrafts.length > 0 && <ReadyToSendPanel drafts={readyDrafts} />}
 
       {/* ---- Profile -------------------------------------------------------- */}
       <section style={card}>
