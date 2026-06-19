@@ -2,6 +2,11 @@ import { cookies } from "next/headers";
 import SalesPipelineClient from "./SalesPipelineClient";
 import LoginForm from "./LoginForm";
 import { getSupabaseServer } from "../../lib/supabaseServer";
+import {
+  deriveLeadPipelineStage,
+  listLeadDraftStatuses,
+  PIPELINE_STAGE_LABELS,
+} from "../../lib/founderMemory";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +14,15 @@ export const metadata = {
   title: "Sales Pipeline Agent · Wryze.ai",
 };
 
-function mapLeadRow(row) {
+function mapLeadRow(row, draftsForLead) {
+  const pipelineStage = deriveLeadPipelineStage({
+    lead: row,
+    drafts: draftsForLead || [],
+  });
   return {
     id: row.id,
+    pipelineStage,
+    pipelineStageLabel: PIPELINE_STAGE_LABELS[pipelineStage] || pipelineStage,
     instituteName: row.institute_name || "",
     website: row.website || "",
     city: row.city || "",
@@ -68,7 +79,11 @@ async function loadLeads() {
       };
     }
 
-    return { leads: (data || []).map(mapLeadRow), error: null };
+    const draftsByLead = await listLeadDraftStatuses((data || []).map((r) => r.id));
+    return {
+      leads: (data || []).map((row) => mapLeadRow(row, draftsByLead[row.id] || [])),
+      error: null,
+    };
   } catch (err) {
     console.error("[sales-pipeline] Supabase client error:", err?.message);
     return {

@@ -31,6 +31,22 @@ const STATUS_COLORS = {
 };
 const PRIORITY_COLORS = { High: "#dc2626", Medium: "#d97706", Low: "#6b7280" };
 
+// Phase 17: derived pipeline-stage colors (label comes from the server item).
+const STAGE2_COLORS = {
+  new_lead: "#64748b",
+  research_done: "#0ea5e9",
+  contact_found: "#6366f1",
+  draft_created: "#8b5cf6",
+  approved: "#0d9488",
+  manually_sent: "#2563eb",
+  awaiting_reply: "#d97706",
+  follow_up_sent: "#0891b2",
+  replied: "#16a34a",
+  booked_call: "#7c3aed",
+  not_interested: "#6b7280",
+  closed: "#334155",
+};
+
 function fmt(iso) {
   if (!iso) return "—";
   try {
@@ -236,6 +252,22 @@ export default function FollowUpsClient({ items, loadError }) {
                   {it.lead_name}
                 </Link>
                 <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {it.pipeline_stage ? (
+                    <span
+                      title="Derived pipeline stage"
+                      style={{
+                        display: "inline-block",
+                        padding: "2px 10px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#fff",
+                        backgroundColor: STAGE2_COLORS[it.pipeline_stage] || "#6b7280",
+                      }}
+                    >
+                      {it.pipeline_stage_label || it.pipeline_stage}
+                    </span>
+                  ) : null}
                   <StatusPill status={it.follow_up_status} />
                   <span style={{ fontSize: 12, fontWeight: 700, color: it.due.color }}>{it.due.label}</span>
                   {it.priority ? (

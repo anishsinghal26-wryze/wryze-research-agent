@@ -56,6 +56,52 @@ const QUALITY_LABELS = {
   duplicate_or_unclear: "Unclear",
 };
 
+// Phase 17: derived pipeline stage (read-only). Display order + colors only;
+// the stage itself is computed server-side and arrives as lead.pipelineStage /
+// lead.pipelineStageLabel.
+const PIPELINE_STAGE_ORDER = [
+  "new_lead",
+  "research_done",
+  "contact_found",
+  "draft_created",
+  "approved",
+  "manually_sent",
+  "awaiting_reply",
+  "follow_up_sent",
+  "replied",
+  "booked_call",
+  "not_interested",
+  "closed",
+];
+const STAGE2_LABELS = {
+  new_lead: "New lead",
+  research_done: "Research done",
+  contact_found: "Contact found",
+  draft_created: "Draft created",
+  approved: "Approved",
+  manually_sent: "Manually sent",
+  awaiting_reply: "Awaiting reply",
+  follow_up_sent: "Follow-up sent",
+  replied: "Replied",
+  booked_call: "Booked call",
+  not_interested: "Not interested",
+  closed: "Closed",
+};
+const STAGE2_COLORS = {
+  new_lead: "#64748b",
+  research_done: "#0ea5e9",
+  contact_found: "#6366f1",
+  draft_created: "#8b5cf6",
+  approved: "#0d9488",
+  manually_sent: "#2563eb",
+  awaiting_reply: "#d97706",
+  follow_up_sent: "#0891b2",
+  replied: "#16a34a",
+  booked_call: "#7c3aed",
+  not_interested: "#6b7280",
+  closed: "#334155",
+};
+
 // Small reusable colored "pill" / badge.
 function Badge({ text, color }) {
   return (
@@ -231,6 +277,12 @@ export default function SalesPipelineClient({ initialLeads }) {
     count: leads.filter((l) => l.status === stage).length,
   }));
 
+  // Phase 17: derived pipeline-stage counts (only stages with >=1 lead).
+  const derivedStageCounts = PIPELINE_STAGE_ORDER.map((stage) => ({
+    stage,
+    count: leads.filter((l) => l.pipelineStage === stage).length,
+  })).filter((s) => s.count > 0);
+
   // Reusable style for the filter dropdowns / inputs.
   const controlStyle = {
     padding: "8px 10px",
@@ -359,6 +411,53 @@ export default function SalesPipelineClient({ initialLeads }) {
         ))}
       </div>
 
+      {/* Phase 17: derived pipeline stage summary -------------------------- */}
+      {derivedStageCounts.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#6b7280",
+              textTransform: "uppercase",
+              letterSpacing: 0.3,
+              marginBottom: 8,
+            }}
+          >
+            Pipeline stage (derived)
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {derivedStageCounts.map(({ stage, count }) => (
+              <span
+                key={stage}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#fff",
+                  backgroundColor: STAGE2_COLORS[stage] || "#6b7280",
+                }}
+              >
+                {STAGE2_LABELS[stage] || stage}
+                <span
+                  style={{
+                    background: "rgba(255,255,255,0.28)",
+                    borderRadius: 999,
+                    padding: "0 7px",
+                  }}
+                >
+                  {count}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filters ----------------------------------------------------------- */}
       <div
         style={{
@@ -441,6 +540,7 @@ export default function SalesPipelineClient({ initialLeads }) {
                 <Th>Fit score</Th>
                 <Th>Priority</Th>
                 <Th>Status</Th>
+                <Th>Pipeline stage</Th>
               </tr>
             </thead>
             <tbody>
@@ -511,13 +611,31 @@ export default function SalesPipelineClient({ initialLeads }) {
                       color={STAGE_COLORS[lead.status]}
                     />
                   </Td>
+                  <Td>
+                    <span
+                      style={{
+                        display: "inline-block",
+                        padding: "2px 10px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#fff",
+                        backgroundColor:
+                          STAGE2_COLORS[lead.pipelineStage] || "#6b7280",
+                      }}
+                    >
+                      {lead.pipelineStageLabel ||
+                        STAGE2_LABELS[lead.pipelineStage] ||
+                        "New lead"}
+                    </span>
+                  </Td>
                 </tr>
               ))}
 
               {filteredLeads.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     style={{
                       padding: 24,
                       textAlign: "center",
